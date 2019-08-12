@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "wheelofjeopardy",
+  "private_key_id": "630b46db1c4119c6afacf8149ddc8363d1853fea",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCuDyahCPw6MljX\nU/4YdxU+1um5W+Tcm5DaQpnwGJlvvZfCJle3Ogfej0v6zBx64XR4QaEQwjzs6hZb\n68R3LZkLvipSvFKN9at9K1jF8kbEuX/AaI+H45O+RvISm8upEFHWbjQ5Ao86zbDm\n+JadHMrQpBoZygdnQL7sKjHdCRDOYyis5oeM1jBGuX6P7HZX8WBRcysYOfW78Cic\njm9Td7QU7bRXXYmPWEt5DuAsO3ML4yqiZZzbrOtqJses0v0nZPd+VVC1UFgzoBBQ\nDr7aHz8QyW33UIv0u9w2ipkDfOqN83n0347kdV0/lnCFkjU0KPJjhZNXA68g1B+w\nBbOK7vitAgMBAAECggEAAo3ezpQ4b0+F+VVPTxdpvmYZsiR8VK0oLNspC7lIZCmH\nHA7DPd2+lGkhUDmpEaAbZ7nWhh5I5nFm3kwTnzxipuzxdcENj3JAaeYst6+juOE6\n8GRkQhA63YgDp0uV+ZH0QXtJHAIYMxTHaCbwOh/qjm8pcpfguuWZlwmZjD0HObyF\nS93sAQ+KHqCUwkv5uOSgtwMxbTjHAHV5IU1dhxnj+fIfmlq1BHEXDUaLXda8n1B1\nMVOyJjbQzKq7LDDb9KOWowykA9LZPDzF+saUuo1PZLQbARtVQ0DTOylcJI1M3ccr\nx4vRRBHHEtOwFiiP+GDkbCa+A490aw1iSl2lc2WWGQKBgQDkBmC1jsIWJUqy/Rad\nnNiIlk8PjwPRfXEpLm6FIQsV2Ap1Mv2MEKWnpTk5Ndq1HxDUzhlSNstXCuMiIFJ3\ngib+FLOVdroa8+hwgOpdM6zKZd31NktIeljBTw94xUHy4YQ+5BYa4MzjSxMAsd0y\nHc59y4N9nRkEaVgq6CjQZzOh8wKBgQDDadxvz5Yf3RSwbLjRBsfOnlFmxLSxItLP\nfHxPTjRF03fI7FopxY5GzH0VxlEuDFvuYuY7bQn8+fCJxuYH/1FBDl8dz1gaCgC9\nhqq8AyvC3bB0T2nnrBzMqpeHGK13sTJDCbeCrNt6hhYsHdUFC5gjKAPLuPk+htA/\nnktRZssC3wKBgQDYCP7ZJK7Xom86UzR5EV/JUHcJK5sXgDyVIquNL/g7stp9nVjA\nugjoY05q2I4kaZFdvQIadVWDWwpEi9D17vaYZO6b3ceGv61p4Ymp0cqUW5zFtLHw\nshGi3A+xgVnxDh5oI1qaDn+vnLIdR2ZlE/5OCmHCwfMwzcm9pQT+JbiyZwKBgAlc\nEa3dUIB4M1x76KJCY+GWnamBdHIji9taSA34XfKWPV+HSo5DoxvrAXbAh/TfrKuP\nWx2vjFHsmsPOngf2B6tJB+9CliKxJfXt9FGLCVaNDb2UbCsniD2ZUiarXOulthWV\n6o88vkpxD7DPQPu74W6VpRDl7DI9fM3/Q/ZDKSgbAoGBAJUdnzx/T2qJtG/RO+hH\nkN2lggOsiCNw8JuUwfVndda0d4q0nQJbankxZzih1fNTkVhOF73Inh9nVym922fg\nC3+YedNFgRGPlccqZIB7cG8XJsiV9TNGYW1D1r2/JsO+9aFEm9uw53Yieq2t1dK5\nzPl1u3TxconSz7ONiZ9Z62x/\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-slkgb@wheelofjeopardy.iam.gserviceaccount.com",
+  "client_id": "103713179586078230180",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-slkgb%40wheelofjeopardy.iam.gserviceaccount.com"
+}
