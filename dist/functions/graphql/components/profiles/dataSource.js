@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", {
 exports.getUserById = getUserById;
 exports.checkExistingEmail = checkExistingEmail;
 exports.createProfile = createProfile;
+exports.getUsersByIds = getUsersByIds;
 exports.updateProfile = updateProfile;
 exports.updateDeviceToken = updateDeviceToken;
 exports.disableProfile = disableProfile;
@@ -29,7 +30,7 @@ const {
   make
 } = require = require("no-avatar");
 
-let transactions = [];
+let profiles = [];
 let resultObj = {};
 let resultDoc;
 let replaceId;
@@ -150,6 +151,70 @@ function _createProfile() {
     });
   });
   return _createProfile.apply(this, arguments);
+}
+
+function getUsersByIds(ids, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = _server.db.collection(collectionName);
+
+    var queryRef = _server.db.collection(collectionName).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var profileRef = transaction.get(queryRef);
+      return profileRef.then(snapshot => {
+        profiles = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            profiles.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: profiles,
+            cursor: profiles.length > 0 ? profiles[profiles.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = _server.db.collection(collectionName);
+
+    var queryRef = _server.db.collection(collectionName).startAt(doc).offset(1).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var profileRef = transaction.get(queryRef);
+      return profileRef.then(snapshot => {
+        profiles = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            profiles.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: profiles,
+            cursor: profiles.length > 0 ? profiles[profiles.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    }).catch(error => {
+      console.log(error);
+      resultObj = {
+        data: null,
+        cursor: null,
+        error: new Error("An error occured while attempting to get profiles")
+      };
+      return resultObj;
+    });
+  }
 }
 
 function updateProfile(id, ip, args) {

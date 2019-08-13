@@ -1,7 +1,9 @@
 import * as gameDataSource from "./dataSource";
 import * as voteDataSource from "../votes/dataSource";
+import * as scoreDataSource from "../scores/dataSource";
 import * as questionDataSource from "../questions/dataSource";
 import * as profileDataSource from "../profiles/dataSource";
+import { transformFirestoreToJson } from "../../utils";
 
 const rootResolvers = {
   Query: {
@@ -41,7 +43,16 @@ const rootResolvers = {
       });
     },
     scores(game, args, context, info) {
-      return null;
+      return scoreDataSource.getScoreByGameId(game.id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     },
     question_categories(answer, args, context, info) {
       return null;
@@ -63,7 +74,18 @@ const rootResolvers = {
         });
     },
     players(game, args, context, info) {
-      return null;
+      return profileDataSource
+        .getUsersByIds(game.player_ids, args.limit, args.after)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
     },
     free_spins(game, args, context, info) {
       return null;

@@ -15,6 +15,12 @@ type Profile {
     deviceToken: String
 }
 
+type PagedProfile {
+    data: [Profile]
+    count: Int
+    cursor: String
+}
+
 type ProfileRequest {
     user_id: String,
     firstName: String!,

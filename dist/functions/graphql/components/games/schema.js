@@ -13,7 +13,7 @@ type Game {
     scores(limit: Int, after: String): PagedScore
     question_categories(limit: Int, after: String): PagedQuestionCategory
     selected_question: Question
-    players: [Profile]
+    players(limit: Int, after: String): PagedProfile
     round: Int
     free_spins(limit: Int, after: String): PagedFreeSpin
     answers: PagedAnswer
@@ -33,7 +33,7 @@ type PagedGame {
 
 extend type Query {
     Game(id: String): Game
-    Games(limit: Int!, after: String): PagedGame
+    Games(limit: Int, after: String): PagedGame
 }
 
 extend type Mutation {

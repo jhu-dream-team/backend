@@ -135,7 +135,6 @@ function getFreeSpinsPaginated(limit, after) {
 }
 
 function updateFreeSpin(id, value) {
-  console.log(value);
   return _server.db.collection(collectionName).doc(id).update({
     value: value
   }).then(() => {

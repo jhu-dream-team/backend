@@ -133,7 +133,6 @@ export function getFreeSpinsPaginated(limit, after) {
 }
 
 export function updateFreeSpin(id, value) {
-  console.log(value);
   return db
     .collection(collectionName)
     .doc(id)

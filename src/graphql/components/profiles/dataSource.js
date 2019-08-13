@@ -5,7 +5,7 @@ import admin from "firebase-admin";
 
 const { make } = (require = require("no-avatar"));
 
-let transactions = [];
+let profiles = [];
 let resultObj = {};
 let resultDoc;
 let replaceId;
@@ -127,6 +127,75 @@ export async function createProfile(
       };
       return resultObj;
     });
+}
+
+export function getUsersByIds(ids, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = db.collection(collectionName);
+    var queryRef = db.collection(collectionName).limit(limit);
+    return db.runTransaction(transaction => {
+      var profileRef = transaction.get(queryRef);
+      return profileRef.then(snapshot => {
+        profiles = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = transformFirestoreToJson(doc);
+            profiles.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: profiles,
+            cursor:
+              profiles.length > 0 ? profiles[profiles.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = db.collection(collectionName);
+    var queryRef = db
+      .collection(collectionName)
+      .startAt(doc)
+      .offset(1)
+      .limit(limit);
+
+    return db
+      .runTransaction(transaction => {
+        var profileRef = transaction.get(queryRef);
+        return profileRef.then(snapshot => {
+          profiles = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = transformFirestoreToJson(doc);
+              profiles.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: profiles,
+              cursor:
+                profiles.length > 0 ? profiles[profiles.length - 1].id : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        resultObj = {
+          data: null,
+          cursor: null,
+          error: new Error("An error occured while attempting to get profiles")
+        };
+        return resultObj;
+      });
+  }
 }
 
 export function updateProfile(id, ip, args) {

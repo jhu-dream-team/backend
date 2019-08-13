@@ -48,7 +48,6 @@ export function getGamesPaginated(limit, after) {
     return db.runTransaction(transaction => {
       var gameRef = transaction.get(queryRef);
       return gameRef.then(snapshot => {
-        console.log(snapshot);
         games = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
@@ -56,7 +55,6 @@ export function getGamesPaginated(limit, after) {
             games.push(parsedData);
           }
         });
-        console.log(games);
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
             data: games,
@@ -440,7 +438,6 @@ export async function spinWheel(id, user_id) {
       .catch(err => {
         throw err;
       });
-    console.log(selected_question);
     while (used_questions.includes(selected_question.data.id)) {
       selected_question = await questionDataSource
         .getRandomQuestionByCategory(random_spin)

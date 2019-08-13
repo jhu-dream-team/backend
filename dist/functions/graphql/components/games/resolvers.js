@@ -9,9 +9,13 @@ var gameDataSource = _interopRequireWildcard(require("./dataSource"));
 
 var voteDataSource = _interopRequireWildcard(require("../votes/dataSource"));
 
+var scoreDataSource = _interopRequireWildcard(require("../scores/dataSource"));
+
 var questionDataSource = _interopRequireWildcard(require("../questions/dataSource"));
 
 var profileDataSource = _interopRequireWildcard(require("../profiles/dataSource"));
+
+var _utils = require("../../utils");
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
@@ -58,7 +62,17 @@ const rootResolvers = {
     },
 
     scores(game, args, context, info) {
-      return null;
+      return scoreDataSource.getScoreByGameId(game.id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     },
 
     question_categories(answer, args, context, info) {
@@ -80,7 +94,17 @@ const rootResolvers = {
     },
 
     players(game, args, context, info) {
-      return null;
+      return profileDataSource.getUsersByIds(game.player_ids, args.limit, args.after).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     },
 
     free_spins(game, args, context, info) {

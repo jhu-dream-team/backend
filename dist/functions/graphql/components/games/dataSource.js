@@ -70,7 +70,6 @@ function getGamesPaginated(limit, after) {
     return _server.db.runTransaction(transaction => {
       var gameRef = transaction.get(queryRef);
       return gameRef.then(snapshot => {
-        console.log(snapshot);
         games = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
@@ -78,7 +77,6 @@ function getGamesPaginated(limit, after) {
             games.push(parsedData);
           }
         });
-        console.log(games);
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
             data: games,
@@ -452,7 +450,6 @@ function _spinWheel() {
       var selected_question = yield questionDataSource.getRandomQuestionByCategory(random_spin).catch(err => {
         throw err;
       });
-      console.log(selected_question);
 
       while (used_questions.includes(selected_question.data.id)) {
         selected_question = yield questionDataSource.getRandomQuestionByCategory(random_spin).catch(err => {

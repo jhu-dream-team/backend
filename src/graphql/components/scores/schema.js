@@ -19,7 +19,7 @@ type PagedScore {
 }
 
 extend type Query {
-    Score(id: String): PagedScore
+    Score(id: String): Score
     Scores(limit: Int!, after: String, owner: String): PagedScore
 }
 `;
