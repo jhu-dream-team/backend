@@ -8,10 +8,30 @@ import {
 import moment from "moment";
 import admin from "firebase-admin";
 
-let scores = [];
+let answer = [];
 let parsedData;
 let resultObj = {};
 const collectionName = "answers";
+
+export function getAnswerByGameId(game_id) {
+  return db
+    .collection(collectionName)
+    .where("game_id", "==", game_id)
+    .get()
+    .then(snapshot => {
+      if (snapshot.size < 1) {
+        return [];
+      }
+      var answers = [];
+      snapshot.forEach(doc => {
+        answers.push(transformFirestoreToJson(doc));
+      });
+      return answers;
+    })
+    .catch(err => {
+      throw err;
+    });
+}
 
 export function getAnswerById(id) {
   return db
@@ -45,17 +65,17 @@ export function getAnswersPaginated(limit, after) {
     return db.runTransaction(transaction => {
       var scoreRef = transaction.get(queryRef);
       return scoreRef.then(snapshot => {
-        scores = [];
+        answers = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
             var parsedData = transformFirestoreToJson(doc);
-            scores.push(parsedData);
+            answers.push(parsedData);
           }
         });
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
-            data: scores,
-            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            data: answers,
+            cursor: answers.length > 0 ? answers[answers.length - 1].id : null,
             count: countSnapshot.size,
             error: null
           };
@@ -74,19 +94,98 @@ export function getAnswersPaginated(limit, after) {
 
     return db
       .runTransaction(transaction => {
-        var scoreRef = transaction.get(queryRef);
-        return scoreRef.then(snapshot => {
-          scores = [];
+        var answerRef = transaction.get(queryRef);
+        return answerRef.then(snapshot => {
+          answers = [];
           snapshot.forEach(doc => {
             if (doc.exists) {
               var parsedData = transformFirestoreToJson(doc);
-              scores.push(parsedData);
+              answers.push(parsedData);
             }
           });
           return transaction.get(countRef).then(countSnapshot => {
             resultObj = {
-              data: scores,
-              cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+              data: answers,
+              cursor:
+                answers.length > 0 ? answers[answers.length - 1].id : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        resultObj = {
+          data: null,
+          cursor: null,
+          error: new Error("An error occured while attempting to get answers")
+        };
+        return resultObj;
+      });
+  }
+}
+
+export function getAnswerByScoreId(score_id, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = db
+      .collection(collectionName)
+      .where("score_id", "==", score_id);
+    var queryRef = db
+      .collection(collectionName)
+      .where("score_id", "==", score_id)
+      .orderBy("updatedAt", "desc")
+      .limit(limit);
+    return db.runTransaction(transaction => {
+      var answerRef = transaction.get(queryRef);
+      return answerRef.then(snapshot => {
+        answers = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = transformFirestoreToJson(doc);
+            answers.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: answers,
+            cursor: answers.length > 0 ? answers[answer.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = db
+      .collection(collectionName)
+      .where("score_id", "==", score_id);
+    var queryRef = db
+      .collection(collectionName)
+      .where("score_id", "==", score_id)
+      .orderBy("updatedAt", "desc")
+      .startAt(doc)
+      .offset(1)
+      .limit(limit);
+
+    return db
+      .runTransaction(transaction => {
+        var answerRef = transaction.get(queryRef);
+        return answerRef.then(snapshot => {
+          answers = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = transformFirestoreToJson(doc);
+              answers.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: answers,
+              cursor:
+                answers.length > 0 ? answers[answers.length - 1].id : null,
               count: countSnapshot.size,
               error: null
             };

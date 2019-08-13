@@ -37,7 +37,9 @@ const path = require("path");
 const secureCompare = require("secure-compare");
 
 const validateFirebaseIdToken = (req, res, next) => {
-  if ((!req.headers.authorization || !req.headers.authorization.startsWith("Brearer ")) && !req.cookies.__session) {
+  console.log(req.headers);
+
+  if ((!req.headers.authorization || !req.headers.authorization.startsWith("Bearer ")) && !req.cookies.__session) {
     res.status(403).send("Unauthorized");
     return;
   }
@@ -50,25 +52,12 @@ const validateFirebaseIdToken = (req, res, next) => {
     idToken = req.cookies.__session;
   }
 
+  console.log(idToken);
   admin.auth().verifyIdToken(idToken).then(
   /*#__PURE__*/
   function () {
     var _ref = _asyncToGenerator(function* (decodedIdToken) {
       decodedIdToken["id"] = decodedIdToken.uid;
-      req.user = decodedIdToken;
-      var userDoc = yield db.collection("dev_users").doc(decodedIdToken.uid).get().catch(err => console.log(err));
-
-      if (userDoc.exists) {
-        if (new Date().getTime() - userDoc.data().lastActivity > 1000 * 60 * 60) {
-          yield db.collection("dev_users").doc(decodedIdToken.uid).update({
-            lastActivity: new Date().getTime()
-          }).catch(err => {
-            console.log(err);
-          });
-        }
-      }
-
-      req.userIp = req.connection.remoteAddress;
       return next();
     });
 

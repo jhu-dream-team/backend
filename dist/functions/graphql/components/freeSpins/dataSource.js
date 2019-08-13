@@ -4,7 +4,9 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.getFreeSpinsById = getFreeSpinsById;
+exports.getFreeSpinsByGameIdPlayerId = getFreeSpinsByGameIdPlayerId;
 exports.getFreeSpinsPaginated = getFreeSpinsPaginated;
+exports.updateFreeSpin = updateFreeSpin;
 exports.createFreeSpin = createFreeSpin;
 
 var _server = require("../../server");
@@ -46,6 +48,25 @@ function getFreeSpinsById(id) {
       error: null
     };
     return resultObj;
+  });
+}
+
+function getFreeSpinsByGameIdPlayerId(game_id, player_id) {
+  return _server.db.collection(collectionName).where("game_id", "==", game_id).where("owner_id", "==", player_id).get().then(snapshot => {
+    if (snapshot.size < 0) {
+      throw Error("No free spin object found");
+    }
+
+    return {
+      data: (0, _utils.transformFirestoreToJson)(snapshot.docs[0]),
+      error: null
+    };
+  }).catch(err => {
+    console.log(err);
+    return {
+      data: null,
+      error: err
+    };
   });
 }
 
@@ -111,6 +132,17 @@ function getFreeSpinsPaginated(limit, after) {
       return resultObj;
     });
   }
+}
+
+function updateFreeSpin(id, value) {
+  console.log(value);
+  return _server.db.collection(collectionName).doc(id).update({
+    value: value
+  }).then(() => {
+    return;
+  }).catch(err => {
+    throw err;
+  });
 }
 
 function createFreeSpin(game_id, owner_id) {

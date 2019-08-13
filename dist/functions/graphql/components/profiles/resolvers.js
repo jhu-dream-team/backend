@@ -48,7 +48,17 @@ const rootResolvers = {
     },
 
     scores(profile, args, context, info) {
-      return null;
+      return scoreDataSource.getScoresByProfileId(profile.id, args.limit, args.after).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     }
 
   },

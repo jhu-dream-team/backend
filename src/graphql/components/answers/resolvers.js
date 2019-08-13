@@ -1,4 +1,5 @@
 import * as answerDataSource from "./dataSource";
+import * as scoreDataSource from "../scores/dataSource";
 import * as voteDataSource from "../votes/dataSource";
 import * as questionDataSource from "../questions/dataSource";
 import * as profileDataSource from "../profiles/dataSource";
@@ -18,7 +19,7 @@ const rootResolvers = {
         return result.data;
       });
     },
-    Scores(obj, args, context, info) {
+    Answers(obj, args, context, info) {
       if (!context.user || !context.user.id) {
         throw new Error("Unauthorized");
       }
@@ -54,6 +55,14 @@ const rootResolvers = {
           }
           return result.data;
         });
+    },
+    score(answer, args, context, info) {
+      return scoreDataSource.getScoreById(answer.score_id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+        return result.data;
+      });
     },
     game(answer, args, context, info) {
       return gameDataSource.getGameById(answer.game_id).then(result => {

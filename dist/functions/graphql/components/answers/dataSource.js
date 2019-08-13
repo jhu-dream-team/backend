@@ -3,8 +3,10 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
+exports.getAnswerByGameId = getAnswerByGameId;
 exports.getAnswerById = getAnswerById;
 exports.getAnswersPaginated = getAnswersPaginated;
+exports.getAnswerByScoreId = getAnswerByScoreId;
 
 var _server = require("../../server");
 
@@ -20,10 +22,26 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
-let scores = [];
+let answer = [];
 let parsedData;
 let resultObj = {};
 const collectionName = "answers";
+
+function getAnswerByGameId(game_id) {
+  return _server.db.collection(collectionName).where("game_id", "==", game_id).get().then(snapshot => {
+    if (snapshot.size < 1) {
+      return [];
+    }
+
+    var answers = [];
+    snapshot.forEach(doc => {
+      answers.push((0, _utils.transformFirestoreToJson)(doc));
+    });
+    return answers;
+  }).catch(err => {
+    throw err;
+  });
+}
 
 function getAnswerById(id) {
   return _server.db.collection(collectionName).doc(id).get().then(doc => {
@@ -53,17 +71,17 @@ function getAnswersPaginated(limit, after) {
     return _server.db.runTransaction(transaction => {
       var scoreRef = transaction.get(queryRef);
       return scoreRef.then(snapshot => {
-        scores = [];
+        answers = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
             var parsedData = (0, _utils.transformFirestoreToJson)(doc);
-            scores.push(parsedData);
+            answers.push(parsedData);
           }
         });
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
-            data: scores,
-            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            data: answers,
+            cursor: answers.length > 0 ? answers[answers.length - 1].id : null,
             count: countSnapshot.size,
             error: null
           };
@@ -77,19 +95,83 @@ function getAnswersPaginated(limit, after) {
     var queryRef = _server.db.collection(collectionName).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
 
     return _server.db.runTransaction(transaction => {
-      var scoreRef = transaction.get(queryRef);
-      return scoreRef.then(snapshot => {
-        scores = [];
+      var answerRef = transaction.get(queryRef);
+      return answerRef.then(snapshot => {
+        answers = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
             var parsedData = (0, _utils.transformFirestoreToJson)(doc);
-            scores.push(parsedData);
+            answers.push(parsedData);
           }
         });
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
-            data: scores,
-            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            data: answers,
+            cursor: answers.length > 0 ? answers[answers.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    }).catch(error => {
+      console.log(error);
+      resultObj = {
+        data: null,
+        cursor: null,
+        error: new Error("An error occured while attempting to get answers")
+      };
+      return resultObj;
+    });
+  }
+}
+
+function getAnswerByScoreId(score_id, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = _server.db.collection(collectionName).where("score_id", "==", score_id);
+
+    var queryRef = _server.db.collection(collectionName).where("score_id", "==", score_id).orderBy("updatedAt", "desc").limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var answerRef = transaction.get(queryRef);
+      return answerRef.then(snapshot => {
+        answers = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            answers.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: answers,
+            cursor: answers.length > 0 ? answers[answer.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = _server.db.collection(collectionName).where("score_id", "==", score_id);
+
+    var queryRef = _server.db.collection(collectionName).where("score_id", "==", score_id).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var answerRef = transaction.get(queryRef);
+      return answerRef.then(snapshot => {
+        answers = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            answers.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: answers,
+            cursor: answers.length > 0 ? answers[answers.length - 1].id : null,
             count: countSnapshot.size,
             error: null
           };

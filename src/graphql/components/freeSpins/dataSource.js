@@ -35,6 +35,30 @@ export function getFreeSpinsById(id) {
     });
 }
 
+export function getFreeSpinsByGameIdPlayerId(game_id, player_id) {
+  return db
+    .collection(collectionName)
+    .where("game_id", "==", game_id)
+    .where("owner_id", "==", player_id)
+    .get()
+    .then(snapshot => {
+      if (snapshot.size < 0) {
+        throw Error("No free spin object found");
+      }
+      return {
+        data: transformFirestoreToJson(snapshot.docs[0]),
+        error: null
+      };
+    })
+    .catch(err => {
+      console.log(err);
+      return {
+        data: null,
+        error: err
+      };
+    });
+}
+
 export function getFreeSpinsPaginated(limit, after) {
   if (after == undefined || after == null) {
     var countRef = db.collection(collectionName);
@@ -106,6 +130,22 @@ export function getFreeSpinsPaginated(limit, after) {
         return resultObj;
       });
   }
+}
+
+export function updateFreeSpin(id, value) {
+  console.log(value);
+  return db
+    .collection(collectionName)
+    .doc(id)
+    .update({
+      value: value
+    })
+    .then(() => {
+      return;
+    })
+    .catch(err => {
+      throw err;
+    });
 }
 
 export function createFreeSpin(game_id, owner_id) {

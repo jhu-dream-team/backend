@@ -60,15 +60,20 @@ function getQuestionById(id) {
 }
 
 function getRandomQuestionByCategory(question_category_id) {
+  console.log(question_category_id);
   return _server.db.collection(collectionName).where("question_category_id", "==", question_category_id).get().then(snapshot => {
     questions = [];
     snapshot.forEach(doc => {
+      console.log(doc);
+
       if (doc.exists) {
         var parsedData = (0, _utils.transformFirestoreToJson)(doc);
         questions.push(parsedData);
       }
     });
+    console.log(questions);
     var random_question_number = (0, _utils.getRandomInt)(questions.length - 1);
+    console.log(random_question_number);
     resultObj = {
       data: questions[random_question_number],
       error: null

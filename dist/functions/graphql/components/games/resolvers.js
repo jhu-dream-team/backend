@@ -18,10 +18,6 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 const rootResolvers = {
   Query: {
     Game(obj, args, context, info) {
-      if (!context.user || !context.user.id) {
-        throw new Error("Unauthorized");
-      }
-
       return gameDataSource.getGameById(args.id).then(result => {
         if (result.error != null) {
           throw error;
@@ -70,7 +66,17 @@ const rootResolvers = {
     },
 
     selected_question(game, args, context, info) {
-      return null;
+      if (game.selected_question == null || game.selected_question.length == 0) {
+        return null;
+      }
+
+      return questionDataSource.getQuestionById(game.selected_question).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return result.data;
+      });
     },
 
     players(game, args, context, info) {
@@ -115,6 +121,30 @@ const rootResolvers = {
       }
 
       return gameDataSource.joinGame(args.id, context.user.id);
+    },
+
+    spinWheel(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return gameDataSource.spinWheel(args.id, context.user.id).then(result => {
+        return result.data;
+      }).catch(err => {
+        throw err;
+      });
+    },
+
+    startGame(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return gameDataSource.startGame(args.id, context.user.id).then(result => {
+        return result;
+      }).catch(err => {
+        throw err;
+      });
     },
 
     leaveGame(obj, args, context, info) {

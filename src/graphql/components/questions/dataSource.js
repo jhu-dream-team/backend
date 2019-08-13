@@ -36,6 +36,7 @@ export function getQuestionById(id) {
 }
 
 export function getRandomQuestionByCategory(question_category_id) {
+  console.log(question_category_id);
   return db
     .collection(collectionName)
     .where("question_category_id", "==", question_category_id)
@@ -43,12 +44,15 @@ export function getRandomQuestionByCategory(question_category_id) {
     .then(snapshot => {
       questions = [];
       snapshot.forEach(doc => {
+        console.log(doc);
         if (doc.exists) {
           var parsedData = transformFirestoreToJson(doc);
           questions.push(parsedData);
         }
       });
+      console.log(questions);
       var random_question_number = getRandomInt(questions.length - 1);
+      console.log(random_question_number);
       resultObj = {
         data: questions[random_question_number],
         error: null

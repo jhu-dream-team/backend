@@ -7,6 +7,8 @@ exports.default = void 0;
 
 var scoreDataSource = _interopRequireWildcard(require("./dataSource"));
 
+var answerDataSource = _interopRequireWildcard(require("../answers/dataSource"));
+
 var gameDataSource = _interopRequireWildcard(require("../games/dataSource"));
 
 var profileDataSource = _interopRequireWildcard(require("../profiles/dataSource"));
@@ -70,7 +72,17 @@ const rootResolvers = {
     },
 
     answers(score, args, context, info) {
-      return null;
+      return answerDataSource.getAnswerByScoreId(score.id, args.limit, args.after).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     }
 
   },

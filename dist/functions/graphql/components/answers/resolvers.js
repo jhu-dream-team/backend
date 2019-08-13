@@ -7,6 +7,8 @@ exports.default = void 0;
 
 var answerDataSource = _interopRequireWildcard(require("./dataSource"));
 
+var scoreDataSource = _interopRequireWildcard(require("../scores/dataSource"));
+
 var voteDataSource = _interopRequireWildcard(require("../votes/dataSource"));
 
 var questionDataSource = _interopRequireWildcard(require("../questions/dataSource"));
@@ -35,7 +37,7 @@ const rootResolvers = {
       });
     },
 
-    Scores(obj, args, context, info) {
+    Answers(obj, args, context, info) {
       if (!context.user || !context.user.id) {
         throw new Error("Unauthorized");
       }
@@ -67,6 +69,16 @@ const rootResolvers = {
 
     question(answer, args, context, info) {
       return questionDataSource.getQuestionById(answer.question_id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return result.data;
+      });
+    },
+
+    score(answer, args, context, info) {
+      return scoreDataSource.getScoreById(answer.score_id).then(result => {
         if (result.error) {
           throw result.error;
         }

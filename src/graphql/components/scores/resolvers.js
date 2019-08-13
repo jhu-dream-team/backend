@@ -1,4 +1,5 @@
 import * as scoreDataSource from "./dataSource";
+import * as answerDataSource from "../answers/dataSource";
 import * as gameDataSource from "../games/dataSource";
 import * as profileDataSource from "../profiles/dataSource";
 
@@ -51,7 +52,18 @@ const rootResolvers = {
       });
     },
     answers(score, args, context, info) {
-      return null;
+      return answerDataSource
+        .getAnswerByScoreId(score.id, args.limit, args.after)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
     }
   },
   Mutation: {}

@@ -7,7 +7,8 @@ exports.default = void 0;
 const typeDefs = `
 type Game {
     id: String!
-    current_spin: Int
+    current_spin: String
+    spins: Int
     name: String
     scores(limit: Int, after: String): PagedScore
     question_categories(limit: Int, after: String): PagedQuestionCategory
@@ -39,6 +40,9 @@ extend type Mutation {
     createGame(name: String, question_categories: [String]): Game
     joinGame(id: String): Status
     leaveGame(id: String): Status
+    spinWheel(id: String): Game
+    completeTurn(id: String): Status
+    startGame(id: String): Status
     deleteGame(id: String): Status
 }
 `;

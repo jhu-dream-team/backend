@@ -5,9 +5,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getScoreById = getScoreById;
 exports.getScoreByReferences = getScoreByReferences;
+exports.getScoreByGameIdPlayerIdRound = getScoreByGameIdPlayerIdRound;
 exports.getScoresPaginated = getScoresPaginated;
 exports.createScore = createScore;
 exports.updateScore = updateScore;
+exports.getScoresByProfileId = getScoresByProfileId;
 
 var _server = require("../../server");
 
@@ -65,6 +67,24 @@ function getScoreByReferences(reference_ids) {
     error: null
   };
   return resultObj;
+}
+
+function getScoreByGameIdPlayerIdRound(game_id, player_id, round) {
+  return _server.db.collection(collectionName).where("game_id", "==", game_id).where("owner_id", "==", player_id).where("round", "==", round).get().then(snapshot => {
+    if (snapshot.size < 1) {
+      throw Error("No score found");
+    }
+
+    return {
+      data: (0, _utils.transformFirestoreToJson)(snapshot.docs[0]),
+      error: null
+    };
+  }).catch(err => {
+    return {
+      data: null,
+      error: err
+    };
+  });
 }
 
 function getScoresPaginated(limit, after) {
@@ -219,4 +239,68 @@ function updateScore(id, args) {
       };
     }
   });
+}
+
+function getScoresByProfileId(profile_id, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = _server.db.collection(collectionName).where("owner_id", "==", profile_id);
+
+    var queryRef = _server.db.collection(collectionName).where("owner_id", "==", profile_id).orderBy("updatedAt", "desc").limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var scoreRef = transaction.get(queryRef);
+      return scoreRef.then(snapshot => {
+        scores = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            scores.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: scores,
+            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = _server.db.collection(collectionName).where("owner_id", "==", profile_id);
+
+    var queryRef = _server.db.collection(collectionName).where("owner_id", "==", profile_id).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var scoreRef = transaction.get(queryRef);
+      return scoreRef.then(snapshot => {
+        scores = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            scores.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: scores,
+            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    }).catch(error => {
+      console.log(error);
+      resultObj = {
+        data: null,
+        cursor: null,
+        error: new Error("An error occured while attempting to get scores")
+      };
+      return resultObj;
+    });
+  }
 }

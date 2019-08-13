@@ -7,6 +7,9 @@ exports.getGameById = getGameById;
 exports.getGamesPaginated = getGamesPaginated;
 exports.joinGame = joinGame;
 exports.leaveGame = leaveGame;
+exports.completeTurn = completeTurn;
+exports.spinWheel = spinWheel;
+exports.startGame = startGame;
 exports.createGame = createGame;
 exports.deleteGame = deleteGame;
 
@@ -15,6 +18,10 @@ var _server = require("../../server");
 var scoreDataSource = _interopRequireWildcard(require("../scores/dataSource"));
 
 var freeSpinDataSource = _interopRequireWildcard(require("../freeSpins/dataSource"));
+
+var questionDataSource = _interopRequireWildcard(require("../questions/dataSource"));
+
+var answerDataSource = _interopRequireWildcard(require("../answers/dataSource"));
 
 var _utils = require("../../utils");
 
@@ -143,6 +150,7 @@ function _joinGame() {
         message: "Cannot join game that has already started",
         code: 401
       };
+      return resultObj;
     }
 
     if (current_game.data.player_ids.includes(user_id)) {
@@ -152,6 +160,7 @@ function _joinGame() {
         message: "Cannot join game that your are already a part of",
         code: 401
       };
+      return resultObj;
     }
 
     return _server.db.collection(collectionName).doc(current_game.data.id).update({
@@ -170,7 +179,7 @@ function _joinGame() {
           }
         });
 
-        return function (_x8) {
+        return function (_x14) {
           return _ref5.apply(this, arguments);
         };
       }());
@@ -236,6 +245,17 @@ function _leaveGame() {
         message: "Cannot leave a game that your are not already a part of",
         code: 401
       };
+      return resultObj;
+    }
+
+    if (user_id == current_game.data.owner_id) {
+      resultObj = {
+        referenceId: id,
+        status: "Failed",
+        message: "Cannot leave a game of which you are the owner",
+        code: 401
+      };
+      return resultObj;
     }
 
     var removed_player = [];
@@ -306,9 +326,248 @@ function _leaveGame() {
   return _leaveGame.apply(this, arguments);
 }
 
+function completeTurn(_x5, _x6) {
+  return _completeTurn.apply(this, arguments);
+}
+
+function _completeTurn() {
+  _completeTurn = _asyncToGenerator(function* (id, user_id) {
+    var current_game = yield getGameById(id);
+
+    if (current_game.error) {
+      throw current_game.error;
+    }
+
+    if (current_game.data.sub_state != "Awaiting Completion By Player") {
+      throw new Error("Wrong state");
+    }
+
+    if (current_game.data.player_ids[current_game.data.spins % current_game.data.player_ids.length] != user_id) {
+      throw new Error("Unauthorized");
+    }
+
+    var round = current_game.data.round;
+    var state = current_game.data.state;
+    var answers = answerDataSource.getGameById(id).catch(err => {
+      throw err;
+    });
+
+    if (current_game.data.spins == 49 || answers.data.length == 30) {
+      if (round == 1) {
+        round = 2;
+      } else {
+        state = "Ended";
+      }
+    }
+
+    return _server.db.collection(collectionName).doc(id).update({
+      sub_state: "Waiting",
+      spins: current_game.data.spins + 1,
+      selected_question: null,
+      current_spin: null,
+      round: round,
+      state: state
+    });
+  });
+  return _completeTurn.apply(this, arguments);
+}
+
+function spinWheel(_x7, _x8) {
+  return _spinWheel.apply(this, arguments);
+}
+
+function _spinWheel() {
+  _spinWheel = _asyncToGenerator(function* (id, user_id) {
+    var current_game = yield getGameById(id);
+
+    if (current_game.error) {
+      throw current_game.error;
+    }
+
+    if (current_game.data.player_ids[current_game.data.spins % current_game.data.player_ids.length] != user_id) {
+      throw new Error("Cannot spin the wheel when it isn't your turn");
+    }
+
+    if (current_game.data.sub_state != "Waiting") {
+      throw new Error("The wheel has already been spun for your turn. Your turn must now complete before proceeding to the next player's turn");
+    }
+
+    yield _server.db.collection(collectionName).doc(id).update({
+      sub_state: "Spinning"
+    }).catch(err => {
+      throw err;
+    });
+    var spin_options = current_game.data.question_categories.slice(6 * (round - 1), 6 * round).concat(["opponent_choice"]);
+    var random_spin = spin_options[(0, _utils.getRandomInt)(spin_options.length - 1)];
+    var player_score = yield scoreDataSource.getScoreByGameIdPlayerIdRound(id, user_id, current_game.data.round).catch(err => {
+      throw err;
+    });
+    var free_spin = yield freeSpinDataSource.getFreeSpinsByGameIdPlayerId(id, user_id);
+    var next_state = "Awaiting Completion By Player";
+
+    switch (random_spin) {
+      case "double_score":
+        yield scoreDataSource.updateScore(player_score.data.id, {
+          modifier: player_score.data.modifier * 2
+        }).catch(err => {
+          throw err;
+        });
+        break;
+
+      case "bankrupt":
+        yield scoreDataSource.updateScore(player_score.data.id, {
+          value: 0
+        }).catch(err => {
+          throw err;
+        });
+        break;
+
+      case "free_spin":
+        yield freeSpinDataSource.updateFreeSpin(free_spin.data.id, free_spin.data.value + 1).catch(err => {
+          throw err;
+        });
+        break;
+
+      case "lose_turn":
+        break;
+
+      case "player_choice":
+        next_state = "Player Choice";
+        break;
+
+      case "opponent_choice":
+        next_state = "Opponent Choice";
+        break;
+
+      default:
+        next_state = "Question Selected";
+        break;
+    }
+
+    if (next_state == "Question Selected") {
+      var answers = yield answerDataSource.getAnswerByGameId(id);
+      var used_questions = answers.map(x => x.question_id);
+      var selected_question = yield questionDataSource.getRandomQuestionByCategory(random_spin).catch(err => {
+        throw err;
+      });
+      console.log(selected_question);
+
+      while (used_questions.includes(selected_question.data.id)) {
+        selected_question = yield questionDataSource.getRandomQuestionByCategory(random_spin).catch(err => {
+          throw err;
+        });
+      }
+
+      return _server.db.collection(collectionName).doc(id).update({
+        sub_state: next_state,
+        selected_question: selected_question.data.id || null
+      }).then(() => {
+        return {
+          data: Object.assign(current_game.data, {
+            sub_state: next_state,
+            selected_question: selected_question.data.id || null,
+            current_spin: random_spin
+          })
+        };
+      }).catch(err => {
+        throw err;
+      });
+    }
+
+    return _server.db.collection(collectionName).doc(id).update({
+      sub_state: next_state,
+      current_spin: random_spin
+    }).then(() => {
+      return {
+        data: Object.assign(current_game.data, {
+          sub_state: next_state,
+          current_spin: random_spin
+        })
+      };
+    }).catch(err => {
+      throw err;
+    });
+  });
+  return _spinWheel.apply(this, arguments);
+}
+
+function startGame(_x9, _x10) {
+  return _startGame.apply(this, arguments);
+}
+
+function _startGame() {
+  _startGame = _asyncToGenerator(function* (id, user_id) {
+    var current_game = yield getGameById(id);
+
+    if (current_game.error) {
+      throw current_game.error;
+    }
+
+    if (current_game.data.owner_id != user_id) {
+      resultObj = {
+        referenceId: id,
+        status: "Failed",
+        message: "Cannot start a game that you do not own",
+        code: 401
+      };
+      return resultObj;
+    }
+
+    if (current_game.data.state != "Created") {
+      resultObj = {
+        referenceId: id,
+        status: "Failed",
+        message: "Cannot start a game that is not in the created state",
+        code: 401
+      };
+      return resultObj;
+    }
+
+    return _server.db.collection(collectionName).doc(id).update({
+      state: "Started",
+      round: 1
+    }).then(() => {
+      resultObj = {
+        referenceId: id,
+        status: "Success",
+        message: "Successfully started the game",
+        code: 200
+      };
+      return resultObj;
+    }).catch(error => {
+      console.log(error);
+
+      if (error.message == "Unauthorized") {
+        return {
+          referenceId: id,
+          status: "Failure",
+          message: "The user requesting deletion is not the owner of the game and therefore unauthorized",
+          code: 401
+        };
+      } else if (error.message == "Document does not exist") {
+        return {
+          referenceId: id,
+          status: "Failure",
+          message: "A game with that id does not exist",
+          code: 404
+        };
+      } else {
+        return {
+          referenceId: id,
+          status: "Failure",
+          message: "An unknown error has occured.",
+          code: 500
+        };
+      }
+    });
+  });
+  return _startGame.apply(this, arguments);
+}
+
 function createGame(name, question_categories, owner_id) {
   return _server.db.collection(collectionName).add({
-    current_spin: 0,
+    spins: 0,
+    current_spin: null,
     name: name,
     question_categories: question_categories,
     selected_question: null,
@@ -333,7 +592,7 @@ function createGame(name, question_categories, owner_id) {
           }
         });
 
-        return function (_x6) {
+        return function (_x12) {
           return _ref2.apply(this, arguments);
         };
       }());
@@ -350,13 +609,13 @@ function createGame(name, question_categories, owner_id) {
           return resultObj;
         });
 
-        return function (_x7) {
+        return function (_x13) {
           return _ref3.apply(this, arguments);
         };
       }());
     });
 
-    return function (_x5) {
+    return function (_x11) {
       return _ref.apply(this, arguments);
     };
   }()).catch(err => {
