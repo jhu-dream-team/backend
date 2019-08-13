@@ -4,11 +4,20 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "start": "micro dist/functions/index.js",
+    "serve": "firebase serve --only functions",
+    "shell": "firebase experimental:functions:shell",
+    "build": "npm run clean && npm run build:funcs && npm run deps:copy && npm run deps:install && npm run keys:copy",
+    "clean": "rimraf 'dist/functions'",
+    "start": "npm run shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
     "build:funcs": "babel src --out-dir dist/functions",
     "deps:copy": "cpx '*{package.json,yarn.lock}' 'dist/functions'",
-    "keys:copy": "cpx 'src/graphql/utilites/jwt.keys.json' 'dist/functions/graphql/utilites'",
-    "deps:install": "cd 'dist/functions' && yarn"
+    "deps:install": "cd 'dist/functions' && yarn",
+    "keys:copy": "cpx 'src/graphql/utils/jwt.keys.json' 'dist/functions/'"
+  },
+  "engines": {
+    "node": "10"
   },
   "devDependencies": {
     "@babel/cli": "^7.5.5",
@@ -34,6 +43,7 @@
     "cookie-parser": "^1.4.4",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "express-graphql": "^0.9.0",
     "faker": "^4.1.0",
     "firebase": "^6.3.5",
     "firebase-admin": "^8.3.0",

@@ -9,8 +9,6 @@ var _express = _interopRequireDefault(require("express"));
 
 var _bodyParser = _interopRequireDefault(require("body-parser"));
 
-var _graphqlServerExpress = require("graphql-server-express");
-
 var _cookieParser = _interopRequireDefault(require("cookie-parser"));
 
 var _schema = _interopRequireDefault(require("./schema"));
@@ -21,18 +19,16 @@ function asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) { try
 
 function _asyncToGenerator(fn) { return function () { var self = this, args = arguments; return new Promise(function (resolve, reject) { var gen = fn.apply(self, args); function _next(value) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "next", value); } function _throw(err) { asyncGeneratorStep(gen, resolve, reject, _next, _throw, "throw", err); } _next(undefined); }); }; }
 
+const functions = require("firebase-functions");
+
 const admin = require("firebase-admin");
 
-var serviceAccount = require("./utils/jwt.keys.json");
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseUrl: "https://wheelofjeopardy.firebaseio.com"
-});
 const db = admin.firestore();
 exports.db = db;
 
 const path = require("path");
+
+const graphqlHTTP = require('express-graphql');
 
 const secureCompare = require("secure-compare");
 
@@ -86,13 +82,21 @@ exports.app = app;
 app.use((0, _cookieParser.default)());
 app.post("/graphql", validateFirebaseIdToken, _bodyParser.default.urlencoded({
   extended: true
-}), _bodyParser.default.json(), (0, _graphqlServerExpress.graphqlExpress)(req => ({
+}), _bodyParser.default.json(), graphqlHTTP(req => ({
   schema: _schema.default,
   context: {
     user: req.user,
     ip: req.userIp
-  }
+  },
+  graphiql: false
 })));
-app.get("/graphiql", validateFirebaseIdToken, (0, _graphqlServerExpress.graphiqlExpress)({
-  endpointURL: "/graphql"
-}));
+app.use("/graphiql", validateFirebaseIdToken, _bodyParser.default.urlencoded({
+  extended: true
+}), _bodyParser.default.json(), graphqlHTTP(req => ({
+  schema: _schema.default,
+  context: {
+    user: req.user,
+    ip: req.userIp
+  },
+  graphiql: true
+})));

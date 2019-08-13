@@ -1,14 +1,10 @@
+const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-var serviceAccount = require("./utils/jwt.keys.json");
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseUrl: "https://wheelofjeopardy.firebaseio.com"
-});
 export const db = admin.firestore();
 const path = require("path");
+const graphqlHTTP = require('express-graphql');
 import express from "express";
 import bodyParser from "body-parser";
-import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import cookieParser from "cookie-parser";
 import schema from "./schema";
 const secureCompare = require("secure-compare");
@@ -76,18 +72,24 @@ app.post(
   validateFirebaseIdToken,
   bodyParser.urlencoded({ extended: true }),
   bodyParser.json(),
-  graphqlExpress(req => ({
+  graphqlHTTP(req => ({
     schema,
-    context: { user: req.user, ip: req.userIp }
+    context: { user: req.user, ip: req.userIp },
+    graphiql: false
   }))
 );
 
-app.get(
+app.use(
   "/graphiql",
   validateFirebaseIdToken,
-  graphiqlExpress({
-    endpointURL: "/graphql"
-  })
+  bodyParser.urlencoded({ extended: true }),
+  bodyParser.json(),
+  graphqlHTTP(req => ({
+    schema,
+    context: { user: req.user, ip: req.userIp },
+    graphiql: true
+  }))
 );
+
 
 export { app };
