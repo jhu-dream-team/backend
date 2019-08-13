@@ -14,7 +14,6 @@ import schema from "./schema";
 const secureCompare = require("secure-compare");
 
 const validateFirebaseIdToken = (req, res, next) => {
-  console.log(req.headers);
   if (
     (!req.headers.authorization ||
       !req.headers.authorization.startsWith("Bearer ")) &&
@@ -32,12 +31,34 @@ const validateFirebaseIdToken = (req, res, next) => {
   } else {
     idToken = req.cookies.__session;
   }
-  console.log(idToken);
   admin
     .auth()
     .verifyIdToken(idToken)
     .then(async decodedIdToken => {
       decodedIdToken["id"] = decodedIdToken.uid;
+      req.user = decodedIdToken;
+      var userDoc = await db
+        .collection("users")
+        .doc(decodedIdToken.uid)
+        .get()
+        .catch(err => console.log(err));
+      if (userDoc.exists) {
+        if (
+          new Date().getTime() - userDoc.data().lastActivity >
+          1000 * 60 * 60
+        ) {
+          await db
+            .collection("users")
+            .doc(decodedIdToken.uid)
+            .update({
+              lastActivity: new Date().getTime()
+            })
+            .catch(err => {
+              console.log(err);
+            });
+        }
+      }
+      req.userIp = req.connection.remoteAddress;
       return next();
     })
     .catch(error => {

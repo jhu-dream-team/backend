@@ -46,8 +46,9 @@ export function getGamesPaginated(limit, after) {
       .orderBy("updatedAt", "desc")
       .limit(limit);
     return db.runTransaction(transaction => {
-      var scoreRef = transaction.get(queryRef);
-      return scoreRef.then(snapshot => {
+      var gameRef = transaction.get(queryRef);
+      return gameRef.then(snapshot => {
+        console.log(snapshot);
         games = [];
         snapshot.forEach(doc => {
           if (doc.exists) {
@@ -55,6 +56,7 @@ export function getGamesPaginated(limit, after) {
             games.push(parsedData);
           }
         });
+        console.log(games);
         return transaction.get(countRef).then(countSnapshot => {
           resultObj = {
             data: games,
@@ -77,8 +79,8 @@ export function getGamesPaginated(limit, after) {
 
     return db
       .runTransaction(transaction => {
-        var scoreRef = transaction.get(queryRef);
-        return scoreRef.then(snapshot => {
+        var gameRef = transaction.get(queryRef);
+        return gameRef.then(snapshot => {
           games = [];
           snapshot.forEach(doc => {
             if (doc.exists) {
@@ -567,7 +569,9 @@ export function createGame(name, question_categories, owner_id) {
       state: "Created",
       sub_state: "Waiting",
       owner_id: owner_id,
-      answer_timeout: 30
+      answer_timeout: 30,
+      updatedAt: getCurrentUnix(),
+      createdAt: getCurrentUnix()
     })
     .then(async docRef => {
       ["game", 1, 2].forEach(async el => {
