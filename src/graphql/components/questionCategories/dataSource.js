@@ -31,6 +31,88 @@ export function getQuestionCategoryById(id) {
     });
 }
 
+export async function getQuestionCategoriesByGameId(game_id, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = null;
+    var queryRef = null;
+    queryRef = db
+      .collection(collectionName)
+      .orderBy("createdAt", "desc")
+      .limit(limit);
+    countRef = db.collection(collectionName);
+    return db.runTransaction(transaction => {
+      var questionCategoryRef = transaction.get(queryRef);
+      return questionCategoryRef.then(snapshot => {
+        question_categories = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = transformFirestoreToJson(doc);
+            question_categories.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: question_categories,
+            cursor:
+              question_categories.length > 0
+                ? question_categories[question_categories.length - 1].id
+                : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = null;
+    var queryRef = null;
+    queryRef = db
+      .collection(collectionName)
+      .orderBy("createdAt", "desc")
+      .startAt(doc)
+      .offset(1)
+      .limit(limit);
+    countRef = db.collection(collectionName);
+    return db
+      .runTransaction(transaction => {
+        var questionCategoryRef = transaction.get(queryRef);
+        return questionCategoryRef.then(snapshot => {
+          question_categories = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = transformFirestoreToJson(doc);
+              question_categories.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: question_categories,
+              cursor:
+                question_categories.length > 0
+                  ? question_categories[question_categories.length - 1].id
+                  : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        resultObj = {
+          data: null,
+          cursor: null,
+          error: new Error(
+            "An error occured while attempting to get question categories"
+          )
+        };
+        return resultObj;
+      });
+  }
+}
+
 export async function getQuestionCategoriesPaginated(limit, after, user_id) {
   let user;
   if (user_id != null) {
@@ -55,10 +137,10 @@ export async function getQuestionCategoriesPaginated(limit, after, user_id) {
     if (user != null) {
       queryRef = db
         .collection(collectionName)
-        .where("owner", "==", id)
+        .where("owner_id", "==", user_id)
         .orderBy("updatedAt", "desc")
         .limit(limit);
-      countRef = db.collection(collectionName).where("owner", "==", id);
+      countRef = db.collection(collectionName).where("owner_id", "==", user_id);
     } else {
       queryRef = db
         .collection(collectionName)
@@ -96,12 +178,12 @@ export async function getQuestionCategoriesPaginated(limit, after, user_id) {
     if (user != null) {
       queryRef = db
         .collection(collectionName)
-        .where("owner", "==", id)
+        .where("owner_id", "==", user_id)
         .orderBy("updatedAt", "desc")
         .startAt(doc)
         .offset(1)
         .limit(limit);
-      countRef = db.collection(collectionName).where("owner", "==", id);
+      countRef = db.collection(collectionName).where("owner_id", "==", user_id);
     } else {
       queryRef = db
         .collection(collectionName)

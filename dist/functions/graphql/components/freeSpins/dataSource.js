@@ -5,6 +5,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.getFreeSpinsById = getFreeSpinsById;
 exports.getFreeSpinsByGameIdPlayerId = getFreeSpinsByGameIdPlayerId;
+exports.getFreeSpinsByGameId = getFreeSpinsByGameId;
 exports.getFreeSpinsPaginated = getFreeSpinsPaginated;
 exports.updateFreeSpin = updateFreeSpin;
 exports.createFreeSpin = createFreeSpin;
@@ -70,11 +71,11 @@ function getFreeSpinsByGameIdPlayerId(game_id, player_id) {
   });
 }
 
-function getFreeSpinsPaginated(limit, after) {
+function getFreeSpinsByGameId(limit, after, game_id) {
   if (after == undefined || after == null) {
-    var countRef = _server.db.collection(collectionName);
+    var countRef = _server.db.collection(collectionName).where("game_id", "==", game_id);
 
-    var queryRef = _server.db.collection(collectionName).orderBy("updatedAt", "desc").limit(limit);
+    var queryRef = _server.db.collection(collectionName).where("game_id", "==", game_id).limit(limit);
 
     return _server.db.runTransaction(transaction => {
       var scoreRef = transaction.get(queryRef);
@@ -98,9 +99,73 @@ function getFreeSpinsPaginated(limit, after) {
       });
     });
   } else {
-    var countRef = _server.db.collection(collectionName);
+    var countRef = _server.db.collection(collectionName).where("game_id", "==", game_id);
 
-    var queryRef = _server.db.collection(collectionName).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
+    var queryRef = _server.db.collection(collectionName).where("game_id", "==", game_id).startAt(doc).offset(1).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var scoreRef = transaction.get(queryRef);
+      return scoreRef.then(snapshot => {
+        scores = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            scores.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: scores,
+            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    }).catch(error => {
+      console.log(error);
+      resultObj = {
+        data: null,
+        cursor: null,
+        error: new Error("An error occured while attempting to get free spins")
+      };
+      return resultObj;
+    });
+  }
+}
+
+function getFreeSpinsPaginated(limit, after, user_id) {
+  if (after == undefined || after == null) {
+    var countRef = _server.db.collection(collectionName).where("owner_id", "==", user_id);
+
+    var queryRef = _server.db.collection(collectionName).where("owner_id", "==", user_id).limit(limit);
+
+    return _server.db.runTransaction(transaction => {
+      var scoreRef = transaction.get(queryRef);
+      return scoreRef.then(snapshot => {
+        scores = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+            scores.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: scores,
+            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = _server.db.collection(collectionName).where("owner_id", "==", user_id);
+
+    var queryRef = _server.db.collection(collectionName).where("owner_id", "==", user_id).startAt(doc).offset(1).limit(limit);
 
     return _server.db.runTransaction(transaction => {
       var scoreRef = transaction.get(queryRef);

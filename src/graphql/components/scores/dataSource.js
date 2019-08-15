@@ -50,6 +50,83 @@ export function getScoreByReferences(reference_ids) {
   return resultObj;
 }
 
+export function getScoreByGameId(game_id, limit, after) {
+  if (after == undefined || after == null) {
+    var countRef = db
+      .collection(collectionName)
+      .where("game_id", "==", game_id);
+    var queryRef = db
+      .collection(collectionName)
+      .where("game_id", "==", game_id)
+      .orderBy("createdAt", "desc")
+      .limit(limit);
+    return db.runTransaction(transaction => {
+      var scoreRef = transaction.get(queryRef);
+      return scoreRef.then(snapshot => {
+        scores = [];
+        snapshot.forEach(doc => {
+          if (doc.exists) {
+            var parsedData = transformFirestoreToJson(doc);
+            scores.push(parsedData);
+          }
+        });
+        return transaction.get(countRef).then(countSnapshot => {
+          resultObj = {
+            data: scores,
+            cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+            count: countSnapshot.size,
+            error: null
+          };
+          return resultObj;
+        });
+      });
+    });
+  } else {
+    var countRef = db
+      .collection(collectionName)
+      .where("game_id", "==", game_id);
+    var queryRef = db
+      .collection(collectionName)
+      .where("game_id", "==", game_id)
+      .orderBy("updatedAt", "desc")
+      .startAt(doc)
+      .offset(1)
+      .limit(limit);
+
+    return db
+      .runTransaction(transaction => {
+        var scoreRef = transaction.get(queryRef);
+        return scoreRef.then(snapshot => {
+          scores = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = transformFirestoreToJson(doc);
+              scores.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: scores,
+              cursor: scores.length > 0 ? scores[scores.length - 1].id : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        resultObj = {
+          data: null,
+          cursor: null,
+          error: new Error("An error occured while attempting to get scores")
+        };
+        return resultObj;
+      });
+  }
+}
+
 export function getScoreByGameIdPlayerIdRound(game_id, player_id, round) {
   return db
     .collection(collectionName)
@@ -74,11 +151,14 @@ export function getScoreByGameIdPlayerIdRound(game_id, player_id, round) {
     });
 }
 
-export function getScoresPaginated(limit, after) {
+export function getScoresPaginated(limit, after, user_id) {
   if (after == undefined || after == null) {
-    var countRef = db.collection(collectionName);
+    var countRef = db
+      .collection(collectionName)
+      .where("owner_id", "==", user_id);
     var queryRef = db
       .collection(collectionName)
+      .where("owner_id", "==", user_id)
       .orderBy("updatedAt", "desc")
       .limit(limit);
     return db.runTransaction(transaction => {
@@ -103,9 +183,12 @@ export function getScoresPaginated(limit, after) {
       });
     });
   } else {
-    var countRef = db.collection(collectionName);
+    var countRef = db
+      .collection(collectionName)
+      .where("owner_id", "==", user_id);
     var queryRef = db
       .collection(collectionName)
+      .where("owner_id", "==", user_id)
       .orderBy("updatedAt", "desc")
       .startAt(doc)
       .offset(1)

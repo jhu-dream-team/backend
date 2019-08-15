@@ -1,4 +1,3 @@
-import { makeExecutableSchema } from "graphql-tools";
 import { profileResolvers, profileSchema } from "./components/profiles";
 import {
   questionCategorySchema,
@@ -13,7 +12,7 @@ import { gameSchema, gameResolvers } from "./components/games";
 import statusSchema from "./components/status";
 import { merge } from "lodash";
 
-export default makeExecutableSchema({
+const schema = {
   typeDefs: [
     profileSchema,
     questionCategorySchema,
@@ -35,4 +34,6 @@ export default makeExecutableSchema({
     voteResolvers,
     gameResolvers
   )
-});
+};
+
+export default schema;

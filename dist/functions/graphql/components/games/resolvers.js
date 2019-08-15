@@ -7,11 +7,15 @@ exports.default = void 0;
 
 var gameDataSource = _interopRequireWildcard(require("./dataSource"));
 
-var voteDataSource = _interopRequireWildcard(require("../votes/dataSource"));
+var answerDataSource = _interopRequireWildcard(require("../answers/dataSource"));
+
+var freeSpinDataSource = _interopRequireWildcard(require("../freeSpins/dataSource"));
 
 var scoreDataSource = _interopRequireWildcard(require("../scores/dataSource"));
 
 var questionDataSource = _interopRequireWildcard(require("../questions/dataSource"));
+
+var questionCategoryDataSource = _interopRequireWildcard(require("../questionCategories/dataSource"));
 
 var profileDataSource = _interopRequireWildcard(require("../profiles/dataSource"));
 
@@ -57,12 +61,16 @@ const rootResolvers = {
           throw result.error;
         }
 
-        return result.data;
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
       });
     },
 
     scores(game, args, context, info) {
-      return scoreDataSource.getScoreByGameId(game.id).then(result => {
+      return scoreDataSource.getScoreByGameId(game.id, args.limit, args.after).then(result => {
         if (result.error) {
           throw result.error;
         }
@@ -75,8 +83,18 @@ const rootResolvers = {
       });
     },
 
-    question_categories(answer, args, context, info) {
-      return null;
+    question_categories(game, args, context, info) {
+      return questionCategoryDataSource.getQuestionCategoriesByGameId(game.id, args.limit, args.after).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     },
 
     selected_question(game, args, context, info) {
@@ -108,11 +126,31 @@ const rootResolvers = {
     },
 
     free_spins(game, args, context, info) {
-      return null;
+      return freeSpinDataSource.getFreeSpinsByGameId(args.limit, args.after, game.id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     },
 
     answers(game, args, context, info) {
-      return null;
+      return answerDataSource.getAnswerByGameId(game.id, args.after, args.limit).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
     }
 
   },
@@ -145,6 +183,42 @@ const rootResolvers = {
       }
 
       return gameDataSource.joinGame(args.id, context.user.id);
+    },
+
+    answerQuestion(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return gameDataSource.answerQuestion(args.id, args.answer, context.user.id).then(result => {
+        return result.data;
+      }).catch(err => {
+        throw err;
+      });
+    },
+
+    voteAnswer(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return gameDataSource.voteAnswer(args.id, args.category_id, context.user.id).then(result => {
+        return result.data;
+      }).catch(err => {
+        throw err;
+      });
+    },
+
+    selectCategory(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+
+      return gameDataSource.selectCategory(args.id, args.category_id, context.user.id).then(result => {
+        return result.data;
+      }).catch(err => {
+        throw err;
+      });
     },
 
     spinWheel(obj, args, context, info) {

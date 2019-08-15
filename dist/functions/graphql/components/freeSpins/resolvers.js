@@ -34,7 +34,7 @@ const rootResolvers = {
         throw new Error("Unauthorized");
       }
 
-      return freeSpinDataSource.getFreeSpinsPaginated(args.limit, args.after).then(result => {
+      return freeSpinDataSource.getFreeSpinsPaginated(args.limit, args.after, context.user.id).then(result => {
         if (result.error != null) {
           throw error;
         }

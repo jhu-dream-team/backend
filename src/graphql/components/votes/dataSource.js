@@ -13,6 +13,35 @@ let parsedData;
 let resultObj = {};
 const collectionName = "votes";
 
+export async function getVoteByAnswerId(answer_id) {
+  return db
+    .collection(collectionName)
+    .where("answer_id", "==", answer_id)
+    .get()
+    .then(snapshot => {
+      if (snapshot.docs.length == 0) {
+        return {
+          data: [],
+          error: null
+        };
+      }
+      votes = [];
+      snapshot.forEach(doc => {
+        votes.push(transformFirestoreToJson(doc));
+      });
+      return {
+        data: votes,
+        error: null
+      };
+    })
+    .catch(err => {
+      return {
+        data: null,
+        error: err
+      };
+    });
+}
+
 export function getVoteById(id) {
   return db
     .collection(collectionName)
@@ -53,6 +82,35 @@ export function getVotesByAnswer(answer_id) {
         error: null
       };
       return resultObj;
+    });
+}
+
+export function createVote(answer_id, game_id, approve, user_id) {
+  return db
+    .collection(collectionName)
+    .add({
+      answer_id: answer_id,
+      game_id: game_id,
+      approve: approve,
+      owner_id: user_id
+    })
+    .then(async docRef => {
+      return db
+        .collection(collectionName)
+        .doc(docRef.id)
+        .get()
+        .then(doc => {
+          return {
+            data: transformFirestoreToJson(doc),
+            error: null
+          };
+        })
+        .catch(err => {
+          return {
+            data: null,
+            error: err
+          };
+        });
     });
 }
 

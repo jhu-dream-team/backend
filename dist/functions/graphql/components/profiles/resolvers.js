@@ -34,16 +34,30 @@ const rootResolvers = {
   },
   Profile: {
     games(profile, args, context, info) {
-      return null;
-    },
-
-    question_categories(profile, args, context, info) {
-      return questionCategoryDataSource.getQuestionCategoriesPaginated(args.limit, args.after, context.user.id).then(ressult => {
+      return gameDataSource.getGamesPaginated(args.limit, args.after, context.user.id).then(result => {
         if (result.error) {
           throw result.error;
         }
 
-        return result.data;
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
+      });
+    },
+
+    question_categories(profile, args, context, info) {
+      return questionCategoryDataSource.getQuestionCategoriesPaginated(args.limit, args.after, context.user.id).then(result => {
+        if (result.error) {
+          throw result.error;
+        }
+
+        return {
+          data: result.data,
+          count: result.count,
+          cursor: result.cursor
+        };
       });
     },
 

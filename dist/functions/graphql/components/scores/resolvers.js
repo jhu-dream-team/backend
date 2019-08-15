@@ -36,7 +36,7 @@ const rootResolvers = {
         throw new Error("Unauthorized");
       }
 
-      return scoreDataSource.getScoresPaginated(args.limit, args.after).then(result => {
+      return scoreDataSource.getScoresPaginated(args.limit, args.after, context.user.id).then(result => {
         if (result.error != null) {
           throw error;
         }

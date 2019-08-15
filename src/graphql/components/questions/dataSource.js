@@ -48,6 +48,13 @@ export function getRandomQuestionByCategory(question_category_id) {
           questions.push(parsedData);
         }
       });
+      if (questions.length == 0) {
+        resultObj = {
+          data: null,
+          error: null
+        };
+        return resultObj;
+      }
       var random_question_number = getRandomInt(questions.length - 1);
       resultObj = {
         data: questions[random_question_number],

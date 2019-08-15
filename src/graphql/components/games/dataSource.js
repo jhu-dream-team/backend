@@ -1,8 +1,10 @@
 import { db } from "../../server";
+import * as voteDataSource from "../votes/dataSource";
 import * as scoreDataSource from "../scores/dataSource";
 import * as freeSpinDataSource from "../freeSpins/dataSource";
 import * as questionDataSource from "../questions/dataSource";
 import * as answerDataSource from "../answers/dataSource";
+import * as profileDataSource from "../profiles/dataSource";
 import {
   transformFirestoreToJson,
   getCurrentUnix,
@@ -38,13 +40,41 @@ export function getGameById(id) {
     });
 }
 
-export function getGamesPaginated(limit, after) {
+export async function getGamesPaginated(limit, after, user_id) {
+  let user;
+  if (user_id != null) {
+    try {
+      user = await profileDataSource.getUserById(user_id);
+      if (user.error) {
+        throw error;
+      }
+    } catch (e) {
+      return {
+        data: null,
+        cursor: null,
+        error: new Error(
+          "Error resolving the user object of the requesting user"
+        )
+      };
+    }
+  }
   if (after == undefined || after == null) {
-    var countRef = db.collection(collectionName);
-    var queryRef = db
-      .collection(collectionName)
-      .orderBy("updatedAt", "desc")
-      .limit(limit);
+    var queryRef = null;
+    var countRef = null;
+    if (user != null) {
+      queryRef = db
+        .collection(collectionName)
+        .where("player_ids", "array-contains", user_id)
+        .orderBy("updatedAt", "desc")
+        .limit(limit);
+      countRef = db.collection(collectionName).where("player_ids", "array-contains", user_id);
+    } else {
+      countRef = db.collection(collectionName);
+      queryRef = db
+        .collection(collectionName)
+        .orderBy("updatedAt", "desc")
+        .limit(limit);
+    }
     return db.runTransaction(transaction => {
       var gameRef = transaction.get(queryRef);
       return gameRef.then(snapshot => {
@@ -67,20 +97,33 @@ export function getGamesPaginated(limit, after) {
       });
     });
   } else {
-    var countRef = db.collection(collectionName);
-    var queryRef = db
-      .collection(collectionName)
-      .orderBy("updatedAt", "desc")
-      .startAt(doc)
-      .offset(1)
-      .limit(limit);
-
+    var queryRef = null;
+    var countRef = null;
+    if (user != null) {
+      queryRef = db
+        .collection(collectionName)
+        .where("player_ids", "array-contains", user_id)
+        .orderBy("updatedAt", "desc")
+        .startAt(doc)
+        .offset(1)
+        .limit(limit);
+      countRef = db.collection(collectionName).where("player_ids", "array-contains", user_id);
+    } else {
+      queryRef = db
+        .collection(collectionName)
+        .orderBy("updatedAt", "desc")
+        .startAt(doc)
+        .offset(1)
+        .limit(limit);
+      countRef = db.collection(collectionName);
+    }
     return db
       .runTransaction(transaction => {
         var gameRef = transaction.get(queryRef);
         return gameRef.then(snapshot => {
           games = [];
           snapshot.forEach(doc => {
+            console.dir(doc)
             if (doc.exists) {
               var parsedData = transformFirestoreToJson(doc);
               games.push(parsedData);
@@ -356,6 +399,255 @@ export async function completeTurn(id, user_id) {
     });
 }
 
+export async function voteAnswer(id, correct, user_id) {
+  var current_game = await getGameById(id);
+  if (current_game.error) {
+    return {
+      referenceId: id,
+      status: "Failed",
+      message: current_game.error.message,
+      code: 200
+    };
+  }
+  if (current_game.data.sub_state != "Voting") {
+    return {
+      referenceId: id,
+      status: "Failed",
+      message: "You cannot vote for an answer when it is not time to vote",
+      code: 401
+    };
+  }
+  var current_question = await questionDataSource
+    .getQuestionById(current_game.data.current_question.id)
+    .catch(err => {
+      return {
+        referenceId: id,
+        status: "Failed",
+        message: err.message,
+        code: 500
+      };
+    });
+  var current_answer = await answerDataSource
+    .getAnswerByGameIdQuestionId(id, current_game.data.selected_question.id)
+    .catch(err => {
+      return {
+        referenceId: id,
+        status: "Failed",
+        message: err.message,
+        code: 500
+      };
+    });
+  if (current_answer.data.owner_id == user_id) {
+    return {
+      referenceId: id,
+      status: "Failed",
+      message: "You cannot vote for your own answer",
+      code: 401
+    };
+  }
+  var current_score = await scoreDataSource
+    .getScoreByGameIdPlayerIdRound(
+      id,
+      current_answer.data.owner_id,
+      current_game.data.round
+    )
+    .catch(err => {
+      return {
+        referenceId,
+        status: "Failed",
+        message: err.message,
+        code: 500
+      };
+    });
+  var current_votes = await voteDataSource
+    .getVotesByAnswerId(current_answer.data.id)
+    .catch(err => {
+      return {
+        referenceId: id,
+        status: "Failed",
+        message: err.message,
+        code: 500
+      };
+    });
+  var total_approve = 0;
+  for (var vote_id in current_votes.data) {
+    if (current_votes.data[vote_id].approve) {
+      total_approve = total_approve + 1;
+    }
+    if (user_id != current_votes.data[id].owner_id) {
+      return voteDataSource.createVote(
+        current_answer.data.id,
+        id,
+        correct,
+        user_id
+      );
+    } else {
+      return {
+        referenceId: id,
+        status: "Failed",
+        message: "You cannot vote because you already voted",
+        code: 401
+      };
+    }
+  }
+  if (current_votes.data.length == 3) {
+    //Handle score update
+    var ratio = total_approve / (current_votes.length + 1);
+    var award = ratio * current_question.data.max_points;
+    await scoreDataSource
+      .updateScore(current_answer.data.score_id, {
+        value: current_score.data.value + award
+      })
+      .catch(err => {
+        return {
+          referenceId: id,
+          status: "Failed",
+          message: err.message,
+          status: 500
+        };
+      });
+    await db.collection(collectionName).update({
+      sub_state: "Awaiting Completion By Player"
+    });
+  }
+  return {
+    referenceId: id,
+    status: "Success",
+    message: "Successfully voted",
+    code: 200
+  };
+}
+
+export async function answerQuestion(id, answer, user_id) {
+  var current_game = await getGameById(id);
+  if (current_game.error) {
+    throw current_game.error;
+  }
+  if (current_game.data.sub_state != "Answering Question") {
+    throw new Error(
+      "You cannot answer a question when a question has not been selected"
+    );
+  }
+  if (
+    current_game.data.player_ids[
+      current_game.data.spins % current_game.data.player_ids.length
+    ] != user_id
+  ) {
+    throw new Error("You cannot answer the question when it is not your turn");
+  }
+  var next_state = "Voting";
+  var player_score = await scoreDataSource
+    .getScoreByGameIdPlayerIdRound(id, user_id, current_game.data.round)
+    .catch(err => {
+      throw err;
+    });
+  await answerDataSource
+    .createAnswer(
+      current_game.data.selected_question.id,
+      player_score.data.id,
+      id,
+      answer,
+      user_id
+    )
+    .catch(err => {
+      throw err;
+    });
+  return db
+    .collection(collectionName)
+    .doc(id)
+    .update({
+      sub_state: next_state
+    })
+    .then(() => {
+      return {
+        data: Object.assign(current_game.data, {
+          sub_state: next_state
+        })
+      };
+    })
+    .catch(err => {
+      throw err;
+    });
+}
+
+export async function selectCategory(id, category_choice, user_id) {
+  var current_game = await getGameById(id);
+  if (current_game.error) {
+    throw current_game.error;
+  }
+  if (
+    current_game.data.sub_state != "Player Choice" &&
+    current_game.data.sub_state != "Opponent Choice"
+  ) {
+    throw new Error(
+      "Cannot select category when not in the Player Choice or Opponent choice state"
+    );
+  }
+  if (
+    current_game.data.player_ids[
+      current_game.data.spins % current_game.data.player_ids.length
+    ] != user_id &&
+    current_game.data.sub_state == "Player Choice"
+  ) {
+    throw new Error(
+      "You cannot select category because it's Player's Choice and not your turn"
+    );
+  }
+  if (
+    current_game.data.player_ids[
+      current_game.data.spins + (1 % current_game.data.player_ids.length)
+    ] != user_id &&
+    current_game.data.sub_state == "Opponent Choice"
+  ) {
+    throw new Error(
+      "You cannot select category because it's Opponent Choice and you are not the next player after the current player's spin"
+    );
+  }
+  if (
+    !current_game.data.question_categories.slice(
+      6 * (current_game.data.round - 1),
+      6 * current_game.data.round
+    )
+  ) {
+    throw new Error(
+      "Question Category is not present in the round or the game itself"
+    );
+  }
+  var answers = await answerDataSource.getAnswerByGameId(id);
+  var used_questions = answers.map(x => x.question_id);
+  var selected_question = await questionDataSource
+    .getRandomQuestionByCategory(random_spin)
+    .catch(err => {
+      throw err;
+    });
+  while (used_questions.includes(selected_question.data.id)) {
+    selected_question = await questionDataSource
+      .getRandomQuestionByCategory(random_spin)
+      .catch(err => {
+        throw err;
+      });
+  }
+  var next_state = "Answering Question";
+  return db
+    .collection(collectionName)
+    .doc(id)
+    .update({
+      sub_state: next_state,
+      selected_question: selected_question.data.id
+    })
+    .then(() => {
+      return {
+        data: Object.assign(current_game.data, {
+          sub_state: next_state,
+          selected_question: selected_question.data.id || null
+        })
+      };
+    })
+    .catch(err => {
+      throw err;
+    });
+}
+
 export async function spinWheel(id, user_id) {
   var current_game = await getGameById(id);
   if (current_game.error) {
@@ -381,7 +673,7 @@ export async function spinWheel(id, user_id) {
       throw err;
     });
   var spin_options = current_game.data.question_categories
-    .slice(6 * (round - 1), 6 * round)
+    .slice(6 * (current_game.data.round - 1), 6 * current_game.data.round)
     .concat(["opponent_choice"]);
   var random_spin = spin_options[getRandomInt(spin_options.length - 1)];
   var player_score = await scoreDataSource
@@ -427,10 +719,10 @@ export async function spinWheel(id, user_id) {
       next_state = "Opponent Choice";
       break;
     default:
-      next_state = "Question Selected";
+      next_state = "Answering";
       break;
   }
-  if (next_state == "Question Selected") {
+  if (next_state == "Answering") {
     var answers = await answerDataSource.getAnswerByGameId(id);
     var used_questions = answers.map(x => x.question_id);
     var selected_question = await questionDataSource
@@ -444,6 +736,9 @@ export async function spinWheel(id, user_id) {
         .catch(err => {
           throw err;
         });
+    }
+    if (selected_question.data == null) {
+      return spinWheel(id, user_id);
     }
     return db
       .collection(collectionName)

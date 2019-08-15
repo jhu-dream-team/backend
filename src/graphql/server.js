@@ -1,13 +1,12 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 export const db = admin.firestore();
-const path = require("path");
-const graphqlHTTP = require('express-graphql');
 import express from "express";
-import bodyParser from "body-parser";
 import cookieParser from "cookie-parser";
 import schema from "./schema";
-const secureCompare = require("secure-compare");
+import expressPlayground from "graphql-playground-middleware-express";
+import { defaultPlaygroundOptions } from "apollo-server-express";
+const { ApolloServer } = require("apollo-server-express");
 
 const validateFirebaseIdToken = (req, res, next) => {
   if (
@@ -63,33 +62,36 @@ const validateFirebaseIdToken = (req, res, next) => {
     });
 };
 
+const server = new ApolloServer({
+  typeDefs: schema.typeDefs,
+  resolvers: schema.resolvers,
+  introspection: true,
+  playground: false,
+  context: ({ req }) => ({
+    user: req.user,
+    ip: req.userIp
+  })
+});
+
 const app = express();
 
 app.use(cookieParser());
 
-app.post(
-  "/graphql",
-  validateFirebaseIdToken,
-  bodyParser.urlencoded({ extended: true }),
-  bodyParser.json(),
-  graphqlHTTP(req => ({
-    schema,
-    context: { user: req.user, ip: req.userIp },
-    graphiql: false
-  }))
-);
+app.use(validateFirebaseIdToken);
 
-app.use(
-  "/graphiql",
-  validateFirebaseIdToken,
-  bodyParser.urlencoded({ extended: true }),
-  bodyParser.json(),
-  graphqlHTTP(req => ({
-    schema,
-    context: { user: req.user, ip: req.userIp },
-    graphiql: true
-  }))
-);
+app.use("/graphiql", (req, res, next) => {
+  const headers = JSON.stringify({
+    authorization: req.headers.authorization || req.cookies.__session
+  });
+  expressPlayground({
+    endpoint: `/graphql?headers=${encodeURIComponent(headers)}`,
+    settings: {
+      ...defaultPlaygroundOptions.settings,
+      "request.credentials": "include"
+    }
+  })(req, res, next);
+});
 
+server.applyMiddleware({ app, path: "/graphql" });
 
 export { app };

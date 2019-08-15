@@ -16,7 +16,7 @@ type Game {
     players(limit: Int, after: String): PagedProfile
     round: Int
     free_spins(limit: Int, after: String): PagedFreeSpin
-    answers: PagedAnswer
+    answers(limit: Int, after: String): PagedAnswer
     state: String
     sub_state: String
     owner: Profile
@@ -42,6 +42,9 @@ extend type Mutation {
     leaveGame(id: String): Status
     spinWheel(id: String): Game
     completeTurn(id: String): Status
+    selectCategory(id: String, category_id: String): Game
+    answerQuestion(id: String, answer: String): Game
+    voteAnswer(id: String, correct: Boolean): Status
     startGame(id: String): Status
     deleteGame(id: String): Status
 }

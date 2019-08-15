@@ -1,7 +1,9 @@
 import * as gameDataSource from "./dataSource";
-import * as voteDataSource from "../votes/dataSource";
+import * as answerDataSource from "../answers/dataSource";
+import * as freeSpinDataSource from "../freeSpins/dataSource";
 import * as scoreDataSource from "../scores/dataSource";
 import * as questionDataSource from "../questions/dataSource";
+import * as questionCategoryDataSource from "../questionCategories/dataSource";
 import * as profileDataSource from "../profiles/dataSource";
 import { transformFirestoreToJson } from "../../utils";
 
@@ -39,14 +41,6 @@ const rootResolvers = {
         if (result.error) {
           throw result.error;
         }
-        return result.data;
-      });
-    },
-    scores(game, args, context, info) {
-      return scoreDataSource.getScoreByGameId(game.id).then(result => {
-        if (result.error) {
-          throw result.error;
-        }
         return {
           data: result.data,
           count: result.count,
@@ -54,8 +48,33 @@ const rootResolvers = {
         };
       });
     },
-    question_categories(answer, args, context, info) {
-      return null;
+    scores(game, args, context, info) {
+      return scoreDataSource
+        .getScoreByGameId(game.id, args.limit, args.after)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
+    },
+    question_categories(game, args, context, info) {
+      return questionCategoryDataSource
+        .getQuestionCategoriesByGameId(game.id, args.limit, args.after)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
     },
     selected_question(game, args, context, info) {
       if (
@@ -88,10 +107,32 @@ const rootResolvers = {
         });
     },
     free_spins(game, args, context, info) {
-      return null;
+      return freeSpinDataSource
+        .getFreeSpinsByGameId(args.limit, args.after, game.id)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
     },
     answers(game, args, context, info) {
-      return null;
+      return answerDataSource
+        .getAnswerByGameId(game.id, args.after, args.limit)
+        .then(result => {
+          if (result.error) {
+            throw result.error;
+          }
+          return {
+            data: result.data,
+            count: result.count,
+            cursor: result.cursor
+          };
+        });
     }
   },
   Mutation: {
@@ -119,6 +160,45 @@ const rootResolvers = {
         throw new Error("Unauthorized");
       }
       return gameDataSource.joinGame(args.id, context.user.id);
+    },
+    answerQuestion(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+      return gameDataSource
+        .answerQuestion(args.id, args.answer, context.user.id)
+        .then(result => {
+          return result.data;
+        })
+        .catch(err => {
+          throw err;
+        });
+    },
+    voteAnswer(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+      return gameDataSource
+        .voteAnswer(args.id, args.category_id, context.user.id)
+        .then(result => {
+          return result.data;
+        })
+        .catch(err => {
+          throw err;
+        });
+    },
+    selectCategory(obj, args, context, info) {
+      if (!context.user || !context.user.id) {
+        throw new Error("Unauthorized");
+      }
+      return gameDataSource
+        .selectCategory(args.id, args.category_id, context.user.id)
+        .then(result => {
+          return result.data;
+        })
+        .catch(err => {
+          throw err;
+        });
     },
     spinWheel(obj, args, context, info) {
       if (!context.user || !context.user.id) {

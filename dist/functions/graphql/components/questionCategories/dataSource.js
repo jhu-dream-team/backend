@@ -4,6 +4,7 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.getQuestionCategoryById = getQuestionCategoryById;
+exports.getQuestionCategoriesByGameId = getQuestionCategoriesByGameId;
 exports.getQuestionCategoriesPaginated = getQuestionCategoriesPaginated;
 exports.createQuestionCategory = createQuestionCategory;
 exports.updateQuestionCategory = updateQuestionCategory;
@@ -51,7 +52,78 @@ function getQuestionCategoryById(id) {
   });
 }
 
-function getQuestionCategoriesPaginated(_x, _x2, _x3) {
+function getQuestionCategoriesByGameId(_x, _x2, _x3) {
+  return _getQuestionCategoriesByGameId.apply(this, arguments);
+}
+
+function _getQuestionCategoriesByGameId() {
+  _getQuestionCategoriesByGameId = _asyncToGenerator(function* (game_id, limit, after) {
+    if (after == undefined || after == null) {
+      var countRef = null;
+      var queryRef = null;
+      queryRef = _server.db.collection(collectionName).orderBy("createdAt", "desc").limit(limit);
+      countRef = _server.db.collection(collectionName);
+      return _server.db.runTransaction(transaction => {
+        var questionCategoryRef = transaction.get(queryRef);
+        return questionCategoryRef.then(snapshot => {
+          question_categories = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+              question_categories.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: question_categories,
+              cursor: question_categories.length > 0 ? question_categories[question_categories.length - 1].id : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      });
+    } else {
+      var countRef = null;
+      var queryRef = null;
+      queryRef = _server.db.collection(collectionName).orderBy("createdAt", "desc").startAt(doc).offset(1).limit(limit);
+      countRef = _server.db.collection(collectionName);
+      return _server.db.runTransaction(transaction => {
+        var questionCategoryRef = transaction.get(queryRef);
+        return questionCategoryRef.then(snapshot => {
+          question_categories = [];
+          snapshot.forEach(doc => {
+            if (doc.exists) {
+              var parsedData = (0, _utils.transformFirestoreToJson)(doc);
+              question_categories.push(parsedData);
+            }
+          });
+          return transaction.get(countRef).then(countSnapshot => {
+            resultObj = {
+              data: question_categories,
+              cursor: question_categories.length > 0 ? question_categories[question_categories.length - 1].id : null,
+              count: countSnapshot.size,
+              error: null
+            };
+            return resultObj;
+          });
+        });
+      }).catch(error => {
+        console.log(error);
+        resultObj = {
+          data: null,
+          cursor: null,
+          error: new Error("An error occured while attempting to get question categories")
+        };
+        return resultObj;
+      });
+    }
+  });
+  return _getQuestionCategoriesByGameId.apply(this, arguments);
+}
+
+function getQuestionCategoriesPaginated(_x4, _x5, _x6) {
   return _getQuestionCategoriesPaginated.apply(this, arguments);
 }
 
@@ -80,8 +152,8 @@ function _getQuestionCategoriesPaginated() {
       var queryRef = null;
 
       if (user != null) {
-        queryRef = _server.db.collection(collectionName).where("owner", "==", id).orderBy("updatedAt", "desc").limit(limit);
-        countRef = _server.db.collection(collectionName).where("owner", "==", id);
+        queryRef = _server.db.collection(collectionName).where("owner_id", "==", user_id).orderBy("updatedAt", "desc").limit(limit);
+        countRef = _server.db.collection(collectionName).where("owner_id", "==", user_id);
       } else {
         queryRef = _server.db.collection(collectionName).orderBy("updatedAt", "desc").limit(limit);
         countRef = _server.db.collection(collectionName);
@@ -113,8 +185,8 @@ function _getQuestionCategoriesPaginated() {
       var queryRef = null;
 
       if (user != null) {
-        queryRef = _server.db.collection(collectionName).where("owner", "==", id).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
-        countRef = _server.db.collection(collectionName).where("owner", "==", id);
+        queryRef = _server.db.collection(collectionName).where("owner_id", "==", user_id).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
+        countRef = _server.db.collection(collectionName).where("owner_id", "==", user_id);
       } else {
         queryRef = _server.db.collection(collectionName).orderBy("updatedAt", "desc").startAt(doc).offset(1).limit(limit);
         countRef = _server.db.collection(collectionName);
@@ -154,7 +226,7 @@ function _getQuestionCategoriesPaginated() {
   return _getQuestionCategoriesPaginated.apply(this, arguments);
 }
 
-function createQuestionCategory(_x4, _x5) {
+function createQuestionCategory(_x7, _x8) {
   return _createQuestionCategory.apply(this, arguments);
 }
 
@@ -181,13 +253,13 @@ function _createQuestionCategory() {
             return resultObj;
           });
 
-          return function (_x7) {
+          return function (_x10) {
             return _ref2.apply(this, arguments);
           };
         }());
       });
 
-      return function (_x6) {
+      return function (_x9) {
         return _ref.apply(this, arguments);
       };
     }()).catch(err => {

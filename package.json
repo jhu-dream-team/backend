@@ -50,6 +50,7 @@
     "firebase-functions": "^3.2.0",
     "googleapis": "^42.0.0",
     "graphql": "^14.4.2",
+    "graphql-playground-middleware-express": "^1.7.12",
     "graphql-server-express": "^1.4.1",
     "graphql-tools": "^4.0.5",
     "hash.js": "^1.1.7",
