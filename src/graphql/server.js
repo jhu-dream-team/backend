@@ -1,6 +1,7 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 export const db = admin.firestore();
+import cors from "cors";
 import express from "express";
 import cookieParser from "cookie-parser";
 import schema from "./schema";
@@ -74,6 +75,8 @@ const server = new ApolloServer({
 });
 
 const app = express();
+
+app.use(cors());
 
 app.use(cookieParser());
 
